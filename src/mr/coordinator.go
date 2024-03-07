@@ -9,11 +9,17 @@ import "net/http"
 
 type Coordinator struct {
 	// Your definitions here.
-
+	file []string
+	num int
 }
 
 // Your code here -- RPC handlers for the worker to call.
-
+func (c *Coordinator) Hand(args *Args, reply *Reply) error {
+	reply.Filename = c.file[c.num];
+	reply.Num = num;
+	num++;
+	return nil
+}
 //
 // an example RPC handler.
 //
@@ -61,10 +67,12 @@ func (c *Coordinator) Done() bool {
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
+	c.file = files
+	c.num = 0;
 
 	// Your code here.
 
-
+  
 	c.server()
 	return &c
 }

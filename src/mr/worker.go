@@ -35,6 +35,45 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
+	args := Args{}
+	// declare a reply structure.
+	reply := Reply{}
+
+	// send the RPC request, wait for the reply.
+	// the "Coordinator.Example" tells the
+	// receiving server that we'd like to call
+	// the Example() method of struct Coordinator.
+	
+	ok := call("Coordinator.Hand", &args, &reply)
+	if ok {
+		// reply.Y should be 100.
+		filename := reply.Filename
+		intermediate := []mr.KeyValue{}
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatalf("cannot open %v", filename)
+		}
+		content, err := io.ReadAll(file)
+		if err != nil {
+			log.Fatalf("cannot read %v", filename)
+		}
+		file.Close()
+		kva := mapf(filename, string(content))  
+		for i := 0; i < len(kva); i++ {
+			fmt.Println(arr[i])
+		  }
+		oname := "mr-"
+		oname += strconv.Itoa(reply.Num)
+		oname += "-"
+		oname += ihash()
+		ofile, _ := os.Create(oname)
+		 
+		fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
+
+	}
+	} else {
+		fmt.Printf("call failed!\n")
+	}
 
 }
 
