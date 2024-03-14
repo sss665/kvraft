@@ -23,12 +23,18 @@ type ExampleReply struct {
 }
 
 type Args struct {
-	X int
+	Mnum int
+	Rnum int
 }
 
 type Reply struct {
 	Filename string
 	Num int
+	Rnum int
+	Nreduce int
+	Done bool
+	Done1 bool
+	Len int
 }
 // Add your RPC definitions here.
 
