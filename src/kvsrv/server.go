@@ -3,7 +3,6 @@ package kvsrv
 import (
 	"log"
 	"sync"
-	"fmt"
 )
 
 const Debug = false
@@ -72,7 +71,7 @@ func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
 }
 func (kv *KVServer) Report(args *PutAppendArgs, reply *PutAppendReply) {
 	//fmt.Println(args.Id)
-	fmt.Println(kv.Smap)
+	
 	kv.Id.Delete(args.Id)
 }
 
