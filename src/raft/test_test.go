@@ -334,10 +334,12 @@ func TestFailNoAgree3B(t *testing.T) {
 	cfg.connect((leader + 1) % servers)
 	cfg.connect((leader + 2) % servers)
 	cfg.connect((leader + 3) % servers)
+	fmt.Println("b")
 
 	// the disconnected majority may have chosen a leader from
 	// among their own ranks, forgetting index 2.
 	leader2 := cfg.checkOneLeader()
+	fmt.Println("a")
 	index2, _, ok2 := cfg.rafts[leader2].Start(30)
 	if ok2 == false {
 		t.Fatalf("leader2 rejected Start()")
@@ -689,10 +691,11 @@ func TestPersist13C(t *testing.T) {
 		cfg.disconnect(i)
 		cfg.connect(i)
 	}
-
+	fmt.Println("c")
 	cfg.one(12, servers, true)
-
+	fmt.Println("b")
 	leader1 := cfg.checkOneLeader()
+	fmt.Println("a")
 	cfg.disconnect(leader1)
 	cfg.start1(leader1, cfg.applier)
 	cfg.connect(leader1)

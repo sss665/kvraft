@@ -44,29 +44,34 @@ func (kv *KVServer) Put(args *PutAppendArgs, reply *PutAppendReply) {
 		return
 	}
 	kv.mu.Lock()
-	kv.Smap[args.Key] = args.Value
+	old := kv.Smap[args.Key]
+	if old != args.Value {
+		kv.Smap[args.Key] = args.Value
+	}
 	kv.mu.Unlock()
-	kv.Id.Store(args.Id,1)
+	kv.Id.Store(args.Id,args.Value)
 	
 	// Your code here.
 }
 
 func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
 	//fmt.Println(args.Id)
-	_,ok := kv.Id.Load(args.Id)
+	va,ok := kv.Id.Load(args.Id)
 	
 	if ok{
 		kv.mu.Lock()
-		reply.Value = kv.Smap[args.Key]
+		reply.Value = va.(string)
 		kv.mu.Unlock()
 		return 
 	}
+	
 	kv.mu.Lock()
 	reply.Value = kv.Smap[args.Key]
 	kv.Smap[args.Key] = kv.Smap[args.Key]+args.Value
 	kv.mu.Unlock()
+	kv.Id.Store(args.Id,reply.Value)
 	
-	kv.Id.Store(args.Id,1)
+	
 	// Your code here.
 }
 func (kv *KVServer) Report(args *PutAppendArgs, reply *PutAppendReply) {
