@@ -2,7 +2,7 @@
 
 github仓库：[raft](https://github.com/sss665/raft)。 
 mit6.5840 学习笔记。  
-注意：论文[raft-extended](https://pdos.csail.mit.edu/6.824/papers/raft-extended.pdf)中的figure 2每一句话都需要严谨实现。在实现出现bug或者卡住时可以看看[student guidence]{https://thesquareplanet.com/blog/students-guide-to-raft/}
+注意：论文[raft-extended](https://pdos.csail.mit.edu/6.824/papers/raft-extended.pdf)中的figure 2每一句话都需要严谨实现。在实现出现bug或者卡住时可以看看[student guidence](https://thesquareplanet.com/blog/students-guide-to-raft)
 ## LAB3 raft
 ### LAB 3A leader election 
 注意两个时间：选举超时，领导者心跳间隔。实现可用go语言关键字select和函数time.After。  
