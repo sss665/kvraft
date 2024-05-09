@@ -44,6 +44,7 @@ type ApplyMsg struct {
 	CommandValid bool
 	Command      interface{}
 	CommandIndex int
+	Term 		 int
 
 	// For 3D:
 	SnapshotValid bool
@@ -299,7 +300,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 			}
 			if entry.Term!=rf.log[index].Term{
 				rf.log = rf.log[:index]
-				break;
+				break
 			}
 			index++
 		}
@@ -342,7 +343,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 			}
 			if entry.Term!=rf.log[index].Term{
 				rf.log = rf.log[:index]
-				break;
+				break
 			}
 			index++
 		}
@@ -405,7 +406,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	if rf.killed() {
 		return true
 	}
-	if !rf.peers[server].Call("Raft.RequestVote", args, reply){
+	for !rf.peers[server].Call("Raft.RequestVote", args, reply){
 		//time.Sleep(10 * time.Millisecond)
 		return true
 	}
@@ -436,7 +437,9 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		for i:=0; i<len(rf.peers); i++{
 			rf.nextIndex[i] = len(rf.log)+1
 			rf.matchIndex[i] = 0
+			//fmt.Println("init",len(rf.log)+1)
 		}
+		//fmt.Println("init",len(rf.log)+1)
 		fmt.Println("leader:",rf.me,rf.currentTerm)
 		go rf.sendAppendEntries2a()
 	//fmt.Println(len(rf.log))
@@ -447,7 +450,7 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 	if rf.killed() {
 		return true
 	}
-	if !rf.peers[server].Call("Raft.AppendEntries", args, reply){
+	for !rf.peers[server].Call("Raft.AppendEntries", args, reply){
 		//time.Sleep(10 * time.Millisecond)
 		return true
 	}
@@ -477,10 +480,23 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 						break
 					}
 				}
-				rf.nextIndex[server] = i+1
+				rf.nextIndex[server] = i+2
 			}
+			//fmt.Println("false",rf.me,rf.nextIndex[server],len(rf.log))
+			//fmt.Println("update",rf.me,rf.nextIndex[server],len(rf.log))
 			//rf.nextIndex[server]--
 			//fmt.Println(rf.nextIndex[server])
+		}
+	}
+	if reply.Success{
+		newNext := args.PrevLogIndex + len(args.Entries) + 1
+		newMatch := args.PrevLogIndex + len(args.Entries)
+		if newNext > rf.nextIndex[server] {
+			rf.nextIndex[server] = newNext
+			//fmt.Println("true",rf.me,rf.nextIndex[server],len(rf.log))
+		}
+		if newMatch > rf.matchIndex[i] {
+			rf.matchIndex[server] = newMatch
 		}
 	}
 	return true
@@ -490,21 +506,25 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 func (rf *Raft) applyfunc()  {
 	for !rf.killed(){
 		rf.mu.Lock()
+		//fmt.Println("apply",rf.me,rf.lastApplied,rf.commitIndex,len(rf.log))
 		for i:=rf.lastApplied;i<rf.commitIndex;i++{
 			am := ApplyMsg{
 				CommandValid :true,
 				Command : rf.log[i].Command,
 				CommandIndex : i+1,
+				Term : rf.currentTerm,
 			}
+			//fmt.Println("apply",rf.me,am)
 			//fmt.Println("a")
 			rf.mu.Unlock()
 			rf.applyCh <- am
 			rf.mu.Lock()
+			rf.lastApplied++
 			//fmt.Println(rf.me,i+1,rf.log[i].Command,rf.state)
 			//fmt.Println(rf.log)
 			//fmt.Println(rf.me,rf.log[i].Command,rf.state)
 		}
-		rf.lastApplied = rf.commitIndex
+		
 		rf.mu.Unlock()
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -617,6 +637,7 @@ func (rf *Raft) sendAppendEntries2one(i int) {
 				rf.mu.Lock()
 				args.Term = rf.currentTerm 
 				args.PrevLogIndex =  rf.nextIndex[i]-1
+				//fmt.Println(rf.nextIndex[i])
 				if args.PrevLogIndex ==0{
 					args.PrevLogTerm = -1
 				}else{
@@ -641,16 +662,6 @@ func (rf *Raft) sendAppendEntries2one(i int) {
 				success = reply.Success
 				time.Sleep(10 * time.Millisecond)
 			}
-			newNext := args.PrevLogIndex + len(args.Entries) + 1
-			newMatch := args.PrevLogIndex + len(args.Entries)
-			rf.mu.Lock()
-			if newNext > rf.nextIndex[i] {
-				rf.nextIndex[i] = newNext
-			}
-			if newMatch > rf.matchIndex[i] {
-				rf.matchIndex[i] = newMatch
-			}
-			rf.mu.Unlock()
 			//fmt.Println(i,rf.nextIndex[i])
 		}else{
 			rf.mu.Unlock()	
@@ -678,6 +689,8 @@ func (rf *Raft) updateN() {
 				}
 				if(sum>(len(rf.peers)/2)){
 					rf.commitIndex = N
+					//fmt.Println("leader",rf.commitIndex,len(rf.log))
+					//fmt.Println("commitindex:",rf.commitIndex)
 				}else{
 					break
 				}
@@ -759,7 +772,7 @@ func (rf *Raft) ticker() {
 			}
 		case 2:
 			rf.mu.Unlock()
-			go rf.hb()
+			rf.hb()
 			//fmt.Printf("a")
 			select {
 			case <-time.After(time.Duration(50) * time.Millisecond):
@@ -811,26 +824,36 @@ func (rf *Raft) hb() {
 	//fmt.Println("b")
 	// := time.Now()            // 开始时间
     // 从开始到当前所消耗的时间
-	rf.mu.Lock()
+	//fmt.Println("log",rf.me,len(rf.log))
+	
 	for i:=0; i<len(rf.peers); i++{
+
 		if i==rf.me{
 			continue
 		}
+		
 		args := AppendEntriesArgs{}
+		rf.mu.Lock()
+		if rf.state!=2{
+			break
+		}
 		//fmt.Println("b")
 		args.Term = rf.currentTerm 
 		args.LeaderCommit = rf.commitIndex
 		args.PrevLogIndex =  rf.nextIndex[i]-1
-		//fmt.Println(rf.nextIndex[i],len(rf.log))
+		
+		//fmt.Println(rf.me,rf.nextIndex[i],len(rf.log))
 		if args.PrevLogIndex ==0{
 			args.PrevLogTerm = -1
 		}else{
 			args.PrevLogTerm = rf.log[args.PrevLogIndex-1].Term
 		}
 		reply := AppendEntriesReply{}
+		rf.mu.Unlock()
 		go rf.sendAppendEntries(i, &args, &reply)
+		
 	}
-	rf.mu.Unlock()
+	
 	//eT := time.Since(bT)   
 	//fmt.Println("Run time: ", eT)
 	

@@ -201,7 +201,8 @@ func (cfg *config) makeClient(to []int) *Clerk {
 		cfg.net.Connect(endnames[j], j)
 	}
 
-	ck := MakeClerk(random_handles(ends))
+	//ck := MakeClerk(random_handles(ends))
+	ck := MakeClerk(ends)
 	cfg.clerks[ck] = endnames
 	cfg.nextClientId++
 	cfg.ConnectClientUnlocked(ck, to)
@@ -352,6 +353,7 @@ func (cfg *config) make_partition() ([]int, []int) {
 		}
 	}
 	p2[len(p2)-1] = l
+	fmt.Println("partition",p1,p2)
 	return p1, p2
 }
 

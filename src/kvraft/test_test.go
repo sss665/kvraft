@@ -195,7 +195,9 @@ func partitioner(t *testing.T, cfg *config, ch chan bool, done *int32) {
 				}
 			}
 		}
+		fmt.Println("partition:",pa[0],pa[1])
 		cfg.partition(pa[0], pa[1])
+
 		time.Sleep(electionTimeout + time.Duration(rand.Int63()%200)*time.Millisecond)
 	}
 }
